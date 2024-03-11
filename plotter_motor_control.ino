@@ -3,6 +3,7 @@
 #include <LiquidCrystal_I2C.h>
 #include "esp_camera.h"
 #include <Wire.h>
+#include "setup.ino"
 
 // Set LCD screen
 LiquidCrystal_I2C lcd(0x27, 16, 2); // Adjust
@@ -30,8 +31,8 @@ const int endSwitchX = 5; // Pin for the X-axis limit switch
 const int endSwitchY = 6; // Pin for the Y-axis limit switch
 
 // Menu state
-int menuIndex = 0;
-const int menuItems = 3; // Adjust based on the number of items in your menu
+int mainMenuIndex = 0;
+const int mainMenuItems = 3; // Adjust based on the number of items in your menu
 
 // SD card and selection data
 int fileIndex = 0;
@@ -73,7 +74,7 @@ void runSetupFunctions()
   homeAllAxis();
 
   // Display welcome menu
-  displayMenu(menuIndex);
+  displayMenu(mainMenuIndex);
 }
 
 // Setup LCD screen
@@ -184,18 +185,18 @@ void navigateMenu()
   // Check button inputs to navigate the menu or select an option
   if (digitalRead(downButtonPin) == LOW) {
     // Increment menu index
-    menuIndex = (menuIndex + 1) % menuItems;
-    displayMenu(menuIndex);
+    mainMenuIndex = (mainMenuIndex + 1) % mainMenuItems;
+    displayMenu(mainMenuIndex);
     delay(200); // Debounce delay
   } else if (digitalRead(upButtonPin) == LOW) {
     // Decrement menu index
-    menuIndex--;
-    if (menuIndex < 0) menuIndex = menuItems - 1;
-    displayMenu(menuIndex);
+    mainMenuIndex--;
+    if (mainMenuIndex < 0) mainMenuIndex = mainMenuItems - 1;
+    displayMenu(mainMenuIndex);
     delay(200); // Debounce delay
   } else if (digitalRead(selectButtonPin) == LOW) {
     // Select current menu item
-    executeMenuItem(menuIndex);
+    executeMenuItem(mainMenuIndex);
     delay(200); // Debounce delay
   }
 }
