@@ -1,4 +1,9 @@
 #include <Stepper.h>
+#include <SD.h>
+#include <LiquidCrystal_I2C.h>
+
+// Set LCD screen
+LiquidCrystal_I2C lcd(0x27, 16, 2); // Adjust
 
 // Steps in rotation of motors
 const int stepsPerRevolution = 200; 
@@ -11,11 +16,26 @@ Stepper stepperY(stepsPerRevolution, 4, 5, 6, 7);   // Y-axis motor
 Stepper stepperZ(stepsPerRevolutionOfAxisZ, 12, 13, 14, 15); // Z-axis motor
 
 // Set pin numbers
-const int endSwitchX = 2; // Pin for the X-axis limit switch
-const int endSwitchY = 3; // Pin for the Y-axis limit switch
-const int eStopButtonPin = 4; // Pin connected to the E-stop button
-const int homeAxisButtonPin = 5; // Pin for home axis to 0,0
-const int testCommandPin = 6; // Pin for test function
+const int upButtonPin = 1;
+const int downButtonPin = 2;
+const int leftButtonPin = 3;
+const int rightButtonPin = 4;
+const int chipSelect = 5;
+const int endSwitchX = 6; // Pin for the X-axis limit switch
+const int endSwitchY = 7; // Pin for the Y-axis limit switch
+const int eStopButtonPin = 8; // Pin connected to the E-stop button
+const int homeAxisButtonPin = 9; // Pin for home axis to 0,0
+const int testCommandPin = 10; // Pin for test function
+const int selectButtonPin = 11; // Select from menu
+
+// SD card and selection data
+int fileIndex = 0;
+int lastButtonStateUp = HIGH;
+int lastButtonStateDown = HIGH;
+int lastButtonStateLeft = HIGH;
+int lastButtonStateRight = HIGH;
+unsigned long lastDebounceTime = 0;
+unsigned long debounceDelay = 50;
 
 // Set up device
 void setup() {
@@ -33,6 +53,22 @@ void setup() {
   pinMode(eStopButtonPin, INPUT_PULLUP); // Initialize the E-stop pin as input with internal pull-up resistor
   pinMode(homeAxisButtonPin, INPUT_PULLUP); // Initialize the home pin
   pinMode(testCommandPin, INPUT_PULLUP); // Initialize the test pin
+  pinMode(upButtonPin, INPUT_PULLUP);
+  pinMode(downButtonPin, INPUT_PULLUP);
+  pinMode(leftButtonPin, INPUT_PULLUP);
+  pinMode(rightButtonPin, INPUT_PULLUP);
+  pinMode(selectButtonPin, INPUT_PULLUP);
+
+  // Initialize LCD display
+  lcd.init();
+  lcd.backlight();
+  if (!SD.begin(chipSelect)) {
+    Serial.println("SD card initialization failed!");
+    return;
+  }
+
+  // Update LCD dislay
+  updateLCDDisplay();
 
   // Home all axis
   homeAllAxis();
@@ -40,6 +76,9 @@ void setup() {
 
 // Main loop
 void loop() {
+  // Navigate the menu on the LCD screen
+  navigateMenu()
+
   // Check for emergency stop button pushed
     if (digitalRead(eStopButtonPin) == LOW) { // Check if the E-stop button is pressed
     emergencyStop();
@@ -59,6 +98,7 @@ void loop() {
   if (Serial.available() > 0) {
     String command = Serial.readStringUntil('\n');
     command.trim(); // Remove any whitespace
+    
     if (command.startsWith("PU")) {
       // Pen Up command. You could use this to disable the motor or to move it to a 'rest' position.
     } else if (command.startsWith("PD")) {
@@ -68,6 +108,42 @@ void loop() {
       myStepper.step(x);
     }
   }
+}
+
+void navigateMenu() {
+  int upButtonState = digitalRead(upButtonPin);
+  int downButtonState = digitalRead(downButtonPin);
+  int leftButtonState = digitalRead(leftButtonPin);
+  int rightButtonState = digitalRead(rightButtonPin);
+
+  if ((upButtonState == LOW && lastButtonStateUp == HIGH) || (downButtonState == LOW && lastButtonStateDown == HIGH)) {
+    lastDebounceTime = millis();
+  }
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    // Check Up Button
+    if (upButtonState == LOW && lastButtonStateUp == HIGH) {
+      fileIndex++;
+      updateDisplay();
+    }
+    // Check Down Button
+    if (downButtonState == LOW && lastButtonStateDown == HIGH) {
+      fileIndex--;
+      updateDisplay();
+    }
+  }
+
+  lastButtonStateUp = upButtonState;
+  lastButtonStateDown = downButtonState;
+  lastButtonStateLeft = leftButtonState;
+  lastButtonStateRight = rightButtonState;
+}
+
+void updateLCDDisplay() {
+  // Optional: Display the current file index or file name
+  lcd.clear();
+  lcd.print("File: ");
+  lcd.print(fileIndex); // Or use a function to get the file name based on index
 }
 
 void homeAllAxis() {
