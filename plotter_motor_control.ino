@@ -1,6 +1,7 @@
 #include <Stepper.h>
 #include <SD.h>
 #include <LiquidCrystal_I2C.h>
+#include "esp_camera.h"
 
 // Set LCD screen
 LiquidCrystal_I2C lcd(0x27, 16, 2); // Adjust
@@ -41,15 +42,40 @@ unsigned long debounceDelay = 50;
 void setup() {
   Serial.begin(9600);
 
-  // Set speed in RPM of motors
-  stepperX.setSpeed(60); 
-  stepperY.setSpeed(60);
-  stepperZ.setSpeed(30);
+  // Initialize motors
+  setupStepperMotors();
 
   // Initialize pins
+  setupPins();
+
+  // Initialize LCD display
+  setupLCDFunctions();
+
+  // Initialize camera
+  setupCamera();
+
+  // SD
+  if (!SD.begin(chipSelect)) {
+    Serial.println("SD card initialization failed!");
+    return;
+  }
+
+  // Home all axis
+  homeAllAxis();
+}
+
+// Setup functions
+void setupLCDFunctions() {
+  lcd.init();
+  lcd.backlight();
+
+  // Update LCD dislay
+  updateLCDDisplay();
+}
+
+void setupPins() {
   pinMode(endSwitchX, INPUT_PULLUP); // Initialize the switch pin as an input with internal pull-up
   pinMode(endSwitchY, INPUT_PULLUP);
-
   pinMode(eStopButtonPin, INPUT_PULLUP); // Initialize the E-stop pin as input with internal pull-up resistor
   pinMode(homeAxisButtonPin, INPUT_PULLUP); // Initialize the home pin
   pinMode(testCommandPin, INPUT_PULLUP); // Initialize the test pin
@@ -58,20 +84,47 @@ void setup() {
   pinMode(leftButtonPin, INPUT_PULLUP);
   pinMode(rightButtonPin, INPUT_PULLUP);
   pinMode(selectButtonPin, INPUT_PULLUP);
+}
 
-  // Initialize LCD display
-  lcd.init();
-  lcd.backlight();
-  if (!SD.begin(chipSelect)) {
-    Serial.println("SD card initialization failed!");
+void setupStepperMotors() {
+  // Set speed in RPM of motors
+  stepperX.setSpeed(60); 
+  stepperY.setSpeed(60);
+  stepperZ.setSpeed(30);
+}
+
+void setupCamera() {
+  Serial.begin(115200);
+
+  // Camera configuration
+  camera_config_t config;
+  config.ledc_channel = LEDC_CHANNEL_0;
+  config.ledc_timer = LEDC_TIMER_0;
+  config.pin_d0 = Y2_GPIO_NUM;
+  config.pin_d1 = Y3_GPIO_NUM;
+  config.pin_d2 = Y4_GPIO_NUM;
+  config.pin_d3 = Y5_GPIO_NUM;
+  config.pin_d4 = Y6_GPIO_NUM;
+  config.pin_d5 = Y7_GPIO_NUM;
+  config.pin_d6 = Y8_GPIO_NUM;
+  config.pin_d7 = Y9_GPIO_NUM;
+  config.pin_xclk = XCLK_GPIO_NUM;
+  config.pin_pclk = PCLK_GPIO_NUM;
+  config.pin_vsync = VSYNC_GPIO_NUM;
+  config.pin_href = HREF_GPIO_NUM;
+  config.pin_sscb_sda = SIOD_GPIO_NUM;
+  config.pin_sscb_scl = SIOC_GPIO_NUM;
+  config.pin_pwdn = PWDN_GPIO_NUM;
+  config.pin_reset = RESET_GPIO_NUM;
+  config.xclk_freq_hz = 20000000;
+  config.pixel_format = PIXFORMAT_JPEG; 
+  
+  // Initialize the camera
+  esp_err_t err = esp_camera_init(&config);
+  if (err != ESP_OK) {
+    Serial.println("Camera init failed with error 0x%x");
     return;
   }
-
-  // Update LCD dislay
-  updateLCDDisplay();
-
-  // Home all axis
-  homeAllAxis();
 }
 
 // Main loop
