@@ -1,24 +1,40 @@
 #include <Stepper.h>
 
-const int stepsPerRevolution = 200; // Adjust based on your stepper motor
+// Steps in rotation of motors
+const int stepsPerRevolution = 200; 
+const int stepsPerRevolutionOfAxisZ = 100; // Z axis smaller motor
+
+// Set stepper motors for all axis
+// Need more input pins
 Stepper stepperX(stepsPerRevolution, 8, 9, 10, 11); // X-axis motor
 Stepper stepperY(stepsPerRevolution, 4, 5, 6, 7);   // Y-axis motor
+Stepper stepperZ(stepsPerRevolutionOfAxisZ, 12, 13, 14, 15); // Z-axis motor
 
-const int switchX = 2; // Pin for the X-axis limit switch
-const int switchY = 3; // Pin for the Y-axis limit switch
+// Set pin numbers
+const int endSwitchX = 2; // Pin for the X-axis limit switch
+const int endSwitchY = 3; // Pin for the Y-axis limit switch
 const int eStopButtonPin = 4; // Pin connected to the E-stop button
-const int homeAxisButtonPin = 5;
+const int homeAxisButtonPin = 5; // Pin for home axis to 0,0
+const int testCommandPin = 6; // Pin for test function
 
+// Set up device
 void setup() {
   Serial.begin(9600);
-  stepperX.setSpeed(60); // Set speed in RPM
+
+  // Set speed in RPM of motors
+  stepperX.setSpeed(60); 
   stepperY.setSpeed(60);
+  stepperZ.setSpeed(30);
 
-  pinMode(switchX, INPUT_PULLUP); // Initialize the switch pin as an input with internal pull-up
-  pinMode(switchY, INPUT_PULLUP);
+  // Initialize pins
+  pinMode(endSwitchX, INPUT_PULLUP); // Initialize the switch pin as an input with internal pull-up
+  pinMode(endSwitchY, INPUT_PULLUP);
+
   pinMode(eStopButtonPin, INPUT_PULLUP); // Initialize the E-stop pin as input with internal pull-up resistor
-  pinMode(homeAxisButtonPin, INPUT_PULLUP) // Initialize the home pin
+  pinMode(homeAxisButtonPin, INPUT_PULLUP); // Initialize the home pin
+  pinMode(testCommandPin, INPUT_PULLUP); // Initialize the test pin
 
+  // Home all axis
   homeAllAxis();
 }
 
@@ -30,8 +46,13 @@ void loop() {
   }
 
   // Check for home button pushed
-    if (digitalRead(homeAxisButtonPin) == LOW) { // Check if the E-stop button is pressed
+    if (digitalRead(homeAxisButtonPin) == LOW) { // Check if the home button is pressed
     homeAllAxis();
+  }
+
+  // Check for test button pushed
+    if (digitalRead(testCommandPin) == LOW) { // Check if the test button is pressed
+    testDevice();
   }
 
   // Listen for commands
@@ -51,13 +72,13 @@ void loop() {
 
 void homeAllAxis() {
   // Move X-axis to home position
-  while (digitalRead(switchX) == HIGH) { // HIGH means the switch is not pressed
+  while (digitalRead(endSwitchX) == HIGH) { // HIGH means the switch is not pressed
     stepperX.step(-1); // Move one step at a time in the negative direction
     delay(5); // Short delay to control the speed
   }
 
   // Move Y-axis to home position
-  while (digitalRead(switchY) == HIGH) { // HIGH means the switch is not pressed
+  while (digitalRead(endSwitchY) == HIGH) { // HIGH means the switch is not pressed
     stepperY.step(-1); // Move one step at a time in the negative direction
     delay(5); // Short delay to control the speed
   }
@@ -67,4 +88,7 @@ void homeAllAxis() {
 }
 
 void emergencyStop() {
+}
+
+void testDevice() {
 }
